@@ -1,9 +1,9 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { InputForm } from './components/InputForm';
 import { ResultsDisplay } from './components/ResultsDisplay';
-import { classifyOncologicalData, fetchGroundedInformation } from './services/geminiService';
+import { classifyOncologicalData, fetchGroundedInformation, extractDemographicsFromFile } from './services/geminiService';
 import type { ClassificationResult, GroundedInfo } from './types';
 import { Loader } from './components/Loader';
 
@@ -13,16 +13,69 @@ const App: React.FC = () => {
   const [familyHistory, setFamilyHistory] = useState<string>('');
   const [geneDataFile, setGeneDataFile] = useState<File | null>(null);
   const [imagingReportFile, setImagingReportFile] = useState<File | null>(null);
+  const [demographicsFile, setDemographicsFile] = useState<File | null>(null);
   const [age, setAge] = useState<string>('');
   const [sex, setSex] = useState<string>('');
   const [bmi, setBmi] = useState<string>('');
   const [bloodPressure, setBloodPressure] = useState<string>('');
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isParsingDemographics, setIsParsingDemographics] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [classificationResult, setClassificationResult] = useState<ClassificationResult | null>(null);
   const [groundedInfo, setGroundedInfo] = useState<GroundedInfo | null>(null);
   const [isFetchingInfo, setIsFetchingInfo] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!demographicsFile) {
+      setAge('');
+      setSex('');
+      setBmi('');
+      setBloodPressure('');
+      return;
+    }
+
+    const fileToDataUrl = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
+    const processFile = async () => {
+        setIsParsingDemographics(true);
+        setError(null);
+        try {
+            if (demographicsFile.type === 'application/json') {
+                const text = await demographicsFile.text();
+                const data = JSON.parse(text);
+                if (data.age !== undefined) setAge(String(data.age));
+                if (data.sex) setSex(data.sex);
+                if (data.bmi !== undefined) setBmi(String(data.bmi));
+                if (data.bloodPressure) setBloodPressure(data.bloodPressure);
+            } else {
+                const dataUrl = await fileToDataUrl(demographicsFile);
+                const base64Data = dataUrl.split(',')[1];
+                const extractedData = await extractDemographicsFromFile(base64Data, demographicsFile.type);
+                
+                if (extractedData.age) setAge(String(extractedData.age));
+                if (extractedData.sex) setSex(extractedData.sex);
+                if (extractedData.bmi) setBmi(String(extractedData.bmi));
+                if (extractedData.bloodPressure) setBloodPressure(extractedData.bloodPressure);
+            }
+        } catch (err) {
+            console.error("Error processing demographics file:", err);
+            setError(`Failed to process demographics file. Please check the file content and try again.`);
+            setDemographicsFile(null);
+        } finally {
+            setIsParsingDemographics(false);
+        }
+    };
+    
+    processFile();
+  }, [demographicsFile]);
 
   const handleClassify = useCallback(async () => {
     if (!clinicalNotes && !geneDataFile && !imagingReportFile && !medicalHistory && !familyHistory) {
@@ -95,12 +148,15 @@ const App: React.FC = () => {
               setGeneDataFile={setGeneDataFile}
               imagingReportFile={imagingReportFile}
               setImagingReportFile={setImagingReportFile}
+              demographicsFile={demographicsFile}
+              setDemographicsFile={setDemographicsFile}
               age={age} setAge={setAge}
               sex={sex} setSex={setSex}
               bmi={bmi} setBmi={setBmi}
               bloodPressure={bloodPressure} setBloodPressure={setBloodPressure}
               onClassify={handleClassify}
               isLoading={isLoading}
+              isParsingDemographics={isParsingDemographics}
             />
           </div>
 
@@ -111,7 +167,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {isLoading && (
+          {isLoading && !isParsingDemographics && (
             <div className="mt-8 flex flex-col items-center justify-center text-center">
               <Loader />
               <p className="text-lg text-text-secondary mt-4">Analyzing data... This may take a moment.</p>

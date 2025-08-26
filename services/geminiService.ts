@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import type { ClassificationResult, Demographics, GroundingChunk, GroundedInfo } from '../types';
 
@@ -138,4 +139,63 @@ export const fetchGroundedInformation = async (cancerType: string): Promise<Grou
     }
     
     return { summary, sources };
+};
+
+export const extractDemographicsFromFile = async (
+  base64Data: string,
+  mimeType: string
+): Promise<Demographics> => {
+  const demographicsSchema = {
+    type: Type.OBJECT,
+    properties: {
+        age: { type: Type.STRING, description: "Patient's age in years. Should be a number as a string." },
+        sex: { type: Type.STRING, description: "Patient's sex (e.g., 'Male', 'Female', 'Other')." },
+        bmi: { type: Type.STRING, description: "Patient's Body Mass Index (BMI). Should be a number as a string." },
+        bloodPressure: { type: Type.STRING, description: "Patient's blood pressure (e.g., '120/80')." }
+    },
+  };
+
+  const prompt = `
+    Analyze the provided document and extract the following patient demographic and vital information:
+    - Age (in years)
+    - Sex
+    - BMI (Body Mass Index)
+    - Blood Pressure (e.g., 120/80)
+
+    Return the extracted information in a structured JSON format. If any piece of information cannot be found, omit the key or set its value to an empty string.
+  `;
+
+  const filePart = {
+    inlineData: {
+      mimeType: mimeType,
+      data: base64Data,
+    },
+  };
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: { parts: [filePart, { text: prompt }] },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: demographicsSchema,
+    },
+  });
+
+  const text = response.text;
+  if (!text) {
+    throw new Error("Received an empty response from the file parsing API.");
+  }
+  
+  try {
+    const parsed = JSON.parse(text);
+    return {
+        age: parsed.age || '',
+        sex: parsed.sex || '',
+        bmi: parsed.bmi || '',
+        bloodPressure: parsed.bloodPressure || '',
+    };
+  } catch (error) {
+    console.error("Failed to parse JSON response from file parsing:", text);
+    throw new Error("The API returned invalid JSON while parsing the file.");
+  }
 };
