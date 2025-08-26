@@ -1,0 +1,5 @@
+{
+  "name": "Muainishi Wa Saratani",
+  "description": "An AI-powered tool for bio-informaticists and healthcare practitioners to classify oncological samples based on genomic and clinical data. The application provides detailed analysis, visualizations, and grounded information to support clinical decision-making.",
+  "requestFramePermissions": []
+}
