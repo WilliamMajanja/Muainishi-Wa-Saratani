@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { UploadIcon } from './icons/UploadIcon';
 import { Loader } from './Loader';
@@ -23,6 +22,7 @@ interface InputFormProps {
   onClassify: () => void;
   isLoading: boolean;
   isParsingDemographics: boolean;
+  demographicsLoaded: boolean;
 }
 
 const inputStyles = "w-full bg-base-100 border border-base-300 rounded-md p-2 text-text-primary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-150 ease-in-out disabled:opacity-50 disabled:bg-base-300/30";
@@ -42,6 +42,7 @@ export const InputForm: React.FC<InputFormProps> = ({
   bloodPressure, setBloodPressure,
   onClassify, isLoading,
   isParsingDemographics,
+  demographicsLoaded,
 }) => {
   const geneFileInputRef = useRef<HTMLInputElement>(null);
   const imagingFileInputRef = useRef<HTMLInputElement>(null);
@@ -71,47 +72,68 @@ export const InputForm: React.FC<InputFormProps> = ({
     }
   };
 
-  const FileUploader = ({ id, file, onFileChange, onDrop, onClear, inputRef, title, description, disabled, acceptedFormats, isProcessing }: any) => (
-    <div>
-      <label className={labelStyles}>{title}</label>
-      <div className="relative">
-        <label 
-          htmlFor={id} 
-          className={`relative flex flex-col items-center justify-center w-full h-32 border-2 border-base-300 border-dashed rounded-lg ${disabled ? 'cursor-not-allowed bg-base-300/30' : 'cursor-pointer bg-base-100 hover:bg-base-300/50'} transition-colors`}
-          onDragOver={disabled ? undefined : handleDragOver}
-          onDrop={disabled ? undefined : onDrop}
-        >
-          <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-2">
-            <UploadIcon className="w-8 h-8 mb-3 text-gray-400" />
-            <p className="mb-2 text-sm text-text-secondary">
-              <span className="font-semibold text-brand-secondary">Click to upload</span> or drag and drop
-            </p>
-            <p className="text-xs text-text-secondary">{description}</p>
-            {file && <p className="text-xs text-brand-secondary mt-2 px-2 truncate max-w-full">{file.name}</p>}
-          </div>
-          <input id={id} type="file" ref={inputRef} className="hidden" onChange={onFileChange} accept={acceptedFormats} disabled={disabled} />
-        </label>
-        {isProcessing && (
-            <div className="absolute inset-0 bg-base-100/80 flex flex-col items-center justify-center rounded-lg">
-                <Loader />
-                <p className="text-text-secondary mt-2 text-sm">Parsing file...</p>
+  const FileUploader = ({ id, file, onFileChange, onDrop, onClear, inputRef, title, description, disabled, acceptedFormats, isProcessing }: any) => {
+    const handleClearClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onClear();
+    };
+  
+    return (
+      <div>
+        <label className={labelStyles}>{title}</label>
+        <div className="relative">
+          <label
+            htmlFor={id}
+            className={`relative flex flex-col items-center justify-center w-full h-32 border-2 border-base-300 border-dashed rounded-lg ${disabled ? 'cursor-not-allowed bg-base-300/30' : 'cursor-pointer bg-base-100 hover:bg-base-300/50'} transition-colors`}
+            onDragOver={disabled ? undefined : handleDragOver}
+            onDrop={disabled ? undefined : onDrop}
+          >
+            <div className="flex flex-col items-center justify-center text-center px-4 w-full">
+              {file && !isProcessing ? (
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    {/* Document Icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <div className="text-left">
+                      <p className="text-sm font-semibold text-text-primary truncate" title={file.name}>{file.name}</p>
+                      <p className="text-xs text-text-secondary">{Math.round(file.size / 1024)} KB</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearClick}
+                    className="p-1.5 bg-red-600 hover:bg-red-500 rounded-full text-white shadow-md transition-transform transform hover:scale-110 flex-shrink-0 ml-4"
+                    aria-label="Remove file"
+                    disabled={disabled}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <UploadIcon className="w-8 h-8 mb-3 text-gray-400" />
+                  <p className="mb-2 text-sm text-text-secondary">
+                    <span className="font-semibold text-brand-secondary">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-text-secondary">{description}</p>
+                </>
+              )}
             </div>
-        )}
-        {file && !disabled && !isProcessing && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="absolute -top-2 -right-2 p-1 bg-red-600 hover:bg-red-500 rounded-full text-white shadow-md transition-transform transform hover:scale-110"
-              aria-label="Remove file"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+            <input id={id} type="file" ref={inputRef} className="hidden" onChange={onFileChange} accept={acceptedFormats} disabled={disabled || isProcessing} />
+          </label>
+          {isProcessing && (
+            <div className="absolute inset-0 bg-base-100/80 flex flex-col items-center justify-center rounded-lg">
+              <Loader />
+              <p className="text-text-secondary mt-2 text-sm">Parsing file...</p>
+            </div>
           )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -138,11 +160,11 @@ export const InputForm: React.FC<InputFormProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label htmlFor="age" className={labelStyles}>Age</label>
-              <input id="age" type="number" className={inputStyles} value={age} onChange={(e) => setAge(e.target.value)} disabled={isLoading || !!demographicsFile} />
+              <input id="age" type="number" className={inputStyles} value={age} onChange={(e) => setAge(e.target.value)} disabled={isLoading || isParsingDemographics || demographicsLoaded} />
             </div>
             <div>
               <label htmlFor="sex" className={labelStyles}>Sex</label>
-              <select id="sex" className={inputStyles} value={sex} onChange={(e) => setSex(e.target.value)} disabled={isLoading || !!demographicsFile}>
+              <select id="sex" className={inputStyles} value={sex} onChange={(e) => setSex(e.target.value)} disabled={isLoading || isParsingDemographics || demographicsLoaded}>
                 <option value="">Select...</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -151,11 +173,11 @@ export const InputForm: React.FC<InputFormProps> = ({
             </div>
              <div>
               <label htmlFor="bmi" className={labelStyles}>BMI</label>
-              <input id="bmi" type="number" step="0.1" className={inputStyles} value={bmi} onChange={(e) => setBmi(e.target.value)} disabled={isLoading || !!demographicsFile} placeholder="e.g., 24.5"/>
+              <input id="bmi" type="number" step="0.1" className={inputStyles} value={bmi} onChange={(e) => setBmi(e.target.value)} disabled={isLoading || isParsingDemographics || demographicsLoaded} placeholder="e.g., 24.5"/>
             </div>
             <div>
               <label htmlFor="bp" className={labelStyles}>Blood Pressure</label>
-              <input id="bp" type="text" className={inputStyles} value={bloodPressure} onChange={(e) => setBloodPressure(e.target.value)} disabled={isLoading || !!demographicsFile} placeholder="e.g., 120/80" />
+              <input id="bp" type="text" className={inputStyles} value={bloodPressure} onChange={(e) => setBloodPressure(e.target.value)} disabled={isLoading || isParsingDemographics || demographicsLoaded} placeholder="e.g., 120/80" />
             </div>
           </div>
         </div>

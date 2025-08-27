@@ -21,6 +21,7 @@ const App: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isParsingDemographics, setIsParsingDemographics] = useState<boolean>(false);
+  const [demographicsLoaded, setDemographicsLoaded] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [classificationResult, setClassificationResult] = useState<ClassificationResult | null>(null);
   const [groundedInfo, setGroundedInfo] = useState<GroundedInfo | null>(null);
@@ -32,6 +33,7 @@ const App: React.FC = () => {
       setSex('');
       setBmi('');
       setBloodPressure('');
+      setDemographicsLoaded(false);
       return;
     }
 
@@ -46,6 +48,7 @@ const App: React.FC = () => {
 
     const processFile = async () => {
         setIsParsingDemographics(true);
+        setDemographicsLoaded(false);
         setError(null);
         try {
             if (demographicsFile.type === 'application/json') {
@@ -65,10 +68,11 @@ const App: React.FC = () => {
                 if (extractedData.bmi) setBmi(String(extractedData.bmi));
                 if (extractedData.bloodPressure) setBloodPressure(extractedData.bloodPressure);
             }
+            setDemographicsLoaded(true);
         } catch (err) {
             console.error("Error processing demographics file:", err);
             setError(`Failed to process demographics file. Please check the file content and try again.`);
-            setDemographicsFile(null);
+            setDemographicsFile(null); // This will trigger the effect to clear state
         } finally {
             setIsParsingDemographics(false);
         }
@@ -157,6 +161,7 @@ const App: React.FC = () => {
               onClassify={handleClassify}
               isLoading={isLoading}
               isParsingDemographics={isParsingDemographics}
+              demographicsLoaded={demographicsLoaded}
             />
           </div>
 
