@@ -25,7 +25,7 @@ Muainishi Wa Saratani is an advanced, AI-powered web application designed for bi
 -   **Charting**: Recharts
 -   **Bundling/Dependencies**: No build step required; uses modern browser features like ES modules and `importmap`.
 
-## 셋업 Setup & Running
+## Setup & Running
 
 This project is a pure client-side application and does not require a build step or a local server to run.
 
