@@ -1,4 +1,4 @@
-# Muainishi Wa Saratani - AI Oncological Classification Tool
+# Muainishi Wa Saratani - AI Oncological Classifier
 
 Muainishi Wa Saratani is an advanced, AI-powered web application designed for bio-informaticists and healthcare practitioners. It classifies oncological samples by analyzing a combination of genomic data, clinical notes, patient history, and medical imaging reports. The tool provides detailed analyses, data visualizations, and web-grounded information to support and accelerate clinical decision-making.
 

@@ -21,6 +21,7 @@ const App: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isParsingDemographics, setIsParsingDemographics] = useState<boolean>(false);
+  const [demographicsReadProgress, setDemographicsReadProgress] = useState<number | null>(null);
   const [demographicsLoaded, setDemographicsLoaded] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [classificationResult, setClassificationResult] = useState<ClassificationResult | null>(null);
@@ -34,20 +35,33 @@ const App: React.FC = () => {
       setBmi('');
       setBloodPressure('');
       setDemographicsLoaded(false);
+      setDemographicsReadProgress(null);
       return;
     }
 
-    const fileToDataUrl = (file: File): Promise<string> => {
+    const fileToDataUrl = (file: File, onProgress: (percent: number) => void): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
+            
+            reader.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = (event.loaded / event.total) * 100;
+                    onProgress(percent);
+                }
+            };
+
+            reader.onload = () => {
+                onProgress(100);
+                resolve(reader.result as string);
+            };
             reader.onerror = (error) => reject(error);
         });
     };
 
     const processFile = async () => {
         setIsParsingDemographics(true);
+        setDemographicsReadProgress(0);
         setDemographicsLoaded(false);
         setError(null);
         try {
@@ -58,8 +72,9 @@ const App: React.FC = () => {
                 if (data.sex) setSex(data.sex);
                 if (data.bmi !== undefined) setBmi(String(data.bmi));
                 if (data.bloodPressure) setBloodPressure(data.bloodPressure);
+                setDemographicsReadProgress(100);
             } else {
-                const dataUrl = await fileToDataUrl(demographicsFile);
+                const dataUrl = await fileToDataUrl(demographicsFile, setDemographicsReadProgress);
                 const base64Data = dataUrl.split(',')[1];
                 const extractedData = await extractDemographicsFromFile(base64Data, demographicsFile.type);
                 
@@ -75,6 +90,7 @@ const App: React.FC = () => {
             setDemographicsFile(null); // This will trigger the effect to clear state
         } finally {
             setIsParsingDemographics(false);
+            setTimeout(() => setDemographicsReadProgress(null), 1000);
         }
     };
     
@@ -161,6 +177,7 @@ const App: React.FC = () => {
               onClassify={handleClassify}
               isLoading={isLoading}
               isParsingDemographics={isParsingDemographics}
+              demographicsReadProgress={demographicsReadProgress}
               demographicsLoaded={demographicsLoaded}
             />
           </div>
